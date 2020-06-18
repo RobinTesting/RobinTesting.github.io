@@ -1,2 +1,703 @@
-<h1>
-    gutenmorgen</h1>
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Aegon aanvragen - ArboNed
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="shortcut icon" href="https://www.arboned.nl/favicon.ico" type="image/vnd.microsoft.icon" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <link
+   rel="stylesheet"
+   href="https://use.fontawesome.com/releases/v5.3.1/css/all.css"
+   integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU"
+   crossorigin="anonymous"
+    />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+    <link href="%%=CloudPagesURL(524)=%%" rel="stylesheet" />
+    <script src="%%=CloudPagesURL(458)=%%"></script>
+    <script src="%%=CloudPagesURL(525)=%%"></script>
+    <script src="%%=CloudPagesURL(526)=%%"></script> 
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-T6FLTS');</script>
+<!-- End Google Tag Manager -->
+  <style>
+    .error-msg { display:block;color:red !important;padding: 10px 0 0; }
+    .error:not(.error-msg) { border:2px solid red !important; }
+    .placeholder:not(#employees) { color:#999; }
+    #employees {width:90%;}
+  </style>  
+  %%[
+  IF RequestParameter('submit') == 'Afsluiten' THEN
+
+<!-- Formulier informatie -->  
+    set @aegon = RequestParameter("aegon")
+    set @aantalmedewerkers = RequestParameter("employees")
+    set @momenteelverzuim = RequestParameter("momenteelverzuim")
+  set @ingangsdatum = RequestParameter("ingangsdatum")
+ 
+<!-- Contactgegevens -->
+    set @aanhef = RequestParameter("aanhef")
+    set @initials = RequestParameter("initials")
+    set @middlename = RequestParameter("middlename")
+    IF @middlename == 'Tussenvoegsel' THEN 
+      set @middlename = ''
+    ELSE
+      SET @middlename = Concat(Uppercase(Substring(@middlename,1,1)), Substring(@middlename,2,Length(@middlename)))
+    ENDIF
+    set @lastname = RequestParameter("lastname") 
+    set @phone = RequestParameter("phone") 
+    set @email = RequestParameter("email") 
+  
+<!-- Bedrijfsgegevens -->
+    set @company = RequestParameter("company")  
+    set @address = RequestParameter("address") 
+    set @zip = RequestParameter("zip") 
+    set @city = RequestParameter("city") 
+  
+<!-- Additioneel -->
+    set @voorwaarden = RequestParameter("voorwaarden") 
+    set @results = RequestParameter("results") 
+    set @kvk = RequestParameter("kvk") 
+    set @duns = RequestParameter("duns") 
+
+<!-- Lookup Account duns -->      
+  SET @ArbonedAccountObject = LookUpRows("Account_Salesforce", "DUNS__c", @duns)
+  IF RowCount(@ArbonedAccountObject) > 0 THEN  
+    SET @ArbonedAccountRow = Row(@ArbonedAccountObject, 1)
+    SET @ArbonedAccountId = Field(@ArbonedAccountRow, "Id")
+  ELSE
+  <!-- DEEL 1 Lookup Account kvk -->     
+    SET @ArbonedAccountObject = LookUpRows("Account_Salesforce", "KvK_Nummer__c", @kvk)
+    IF RowCount(@ArbonedAccountObject) > 0 THEN
+      SET @ArbonedAccountRow = Row(@ArbonedAccountObject, 1)
+      SET @ArbonedAccountId = Field(@ArbonedAccountRow, "Id")
+    ELSE
+  
+<!-- niet bekend Create Account -->   
+      SET @ArbonedAccountId = CreateSalesforceObject(
+        'Account', 6, 
+        'Name', @company, 
+        'ShippingStreet', @address, 
+        'ShippingCity', @city,
+        'ShippingPostalCode', @zip,
+        'KvK_Nummer__c', @kvk,
+        'DUNS__c', @duns
+       )
+    ENDIF 
+
+  ENDIF 
+<!-- Contact aanmaken -->   
+SET @ArbonedContactId =  CreateSalesforceObject(
+      'Contact', 7, 
+      'Salutation', @aanhef, 
+      'Initials__c', @initials, 
+      'MiddleName', @middlename,
+      'LastName', @lastname,
+      'Phone', @phone,
+      'Email', @email,
+      'Accountid', @ArbonedAccountId
+     ) 
+
+
+          <!-- Lookup Product -->   
+IF @aegon == "ArboNed Comfort Aegon" THEN
+SET @productnaam = LookUpRows("Product2_Salesforce", "Name", "ArboNed Comfort Aegon")  
+SET @ArbonedProductRow = Row(@productnaam, 1)
+SET @ArbonedProductNaam = "ArboNed Comfort Aegon"
+SET @Dienstcode = Field(@ArbonedProductRow, "Dienstcode__c")
+SET @ProductFamily = Field(@ArbonedProductRow, "Family")  
+SET @ProductFamily2ndtear = Field(@ArbonedProductRow, "Product_Family_2nd_tear__c")    
+SET @ArbonedProductId = Field(@ArbonedProductRow, "Id")
+SET @PricebookEntryID = "01u4I00000sHB15QAG"    
+  
+ELSEIF @aegon == "ArboNed Basis Aegon" THEN
+SET @productnaam = LookUpRows("Product2_Salesforce", "Name", "ArboNed Basis Aegon")  
+SET @ArbonedProductRow = Row(@productnaam, 1)
+SET @ArbonedProductNaam = "ArboNed Basis Aegon"
+SET @Dienstcode = Field(@ArbonedProductRow, "Dienstcode__c")
+SET @ProductFamily = Field(@ArbonedProductRow, "Family")  
+SET @ProductFamily2ndtear = Field(@ArbonedProductRow, "Product_Family_2nd_tear__c")     
+SET @ArbonedProductId = Field(@ArbonedProductRow, "Id")
+SET @PricebookEntryID = "01u4I00000sHB1yQAG"  
+ ENDIF
+
+ 
+set @closedate = FormatDate(Now(),"YYYY-MM-DD", "", "nl-NL")
+set @oppnaam = Concat(@aegon," - ",@company)
+set @oppuser = "00558000002W0nzAAC"  
+set @RecordTypeId = "012580000006JIUAA2"    
+     <!-- Create Opportunity -->   
+SET @newopportunity = CreateSalesforceObject(
+    'Opportunity', 25, 
+    'Name', @oppnaam, 
+    'Aantal_werknemers_online_formulier__c', @aantalmedewerkers,
+    'Momenteel_verzuim__c', @momenteelverzuim,
+    'Gewenste_ingangsdatum__c', @ingangsdatum,
+    'Algemene_Voorwaarden__c', @voorwaarden,
+    'Result__c', @results, 
+    'Formulier_Adres__c', @address,
+    'Formulier_Postcode__c', @zip,
+    'Formulier_Plaats__c',@city,
+    'Formulier_Bedrijfsnaam__c', @company,
+    'StageName', "Closed Won",
+    'Amount', @results,
+    'Type_Opp__c', "gesloten gewonnen",
+    'CloseDate', @closedate,
+    'LeadSource', "Online Formulieren",  
+    'AccountId', @ArbonedAccountId,
+    'OwnerId', @oppuser,
+    'ContactID__c',@ArbonedContactId,
+    'RecordTypeId', @RecordTypeId,
+    'Formulier_Contact_Salutation__c', @aanhef,
+'Formulier_Contact_Initials__c', @initials,
+'Formulier_Contact_MiddleName__c', @middlename,
+'Formulier_Contact_LastName__c', @lastname,
+'Formulier_Contact_Phone__c', @phone,
+'Formulier_Contact_Email__c', @email
+  ) 
+
+  SET @newOpportunityLineItem = CreateSalesforceObject(  
+  'OpportunityLineItem', 5, 
+  'OpportunityId', @newopportunity,
+  'UnitPrice', @results,
+  'Quantity', "1",
+  'Product2Id', @ArbonedProductId,
+  'PricebookEntryId', @PricebookEntryID
+  )
+  
+  SET @ArbonedOpportunityContactRole =  CreateSalesforceObject(
+  'OpportunityContactRole', 2,
+  'ContactId',@ArbonedContactId,
+  'OpportunityId', @newopportunity)
+  
+  ENDIF
+
+  ]%%
+  <style>
+  input[type="date"] {
+    padding: 15px 10px 10px;
+    margin: 10px 0;
+    font-size: 18px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    box-sizing: border-box;
+    font-family: SchulbuchNord, Verdana, Arial, sans-serif;
+    line-height: 1.1;
+    width: 90%;
+   }
+    
+   .note{
+     font-size:11px; 
+     display:none;
+    } 
+    
+    @media only screen and (max-width: 600px) {
+      input[type="date"] {
+       width: 100%; 
+      }
+    }
+  </style>
+</head>
+
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T6FLTS"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+  
+<!-- Header (met logo) -->
+    <header>
+        <div class="grid">
+            <div class="section--1">
+                <div id="block-sitebranding" class="block-sitebranding">
+                    <a class="logo-link" href="https://www.arboned.nl/" title="Home" rel="home">
+                        <img class="logo" src="https://www.arboned.nl/logo-white.svg" alt="Logo">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+  
+<!-- Bedanktpagina -->
+    %%[IF RequestParameter('submit') == 'Afsluiten' THEN]%%
+    <div class="grid" id="content">
+        <div class="section--2">
+            <div class="content">
+              <div style="display:none;">
+                <!-- Bedanktpagina kun je hier aanpassen -->
+              </div>
+              <p>
+                <i class="fas fa-circle-notch fa-spin" style="font-size:24px"></i>&nbsp; Uw aanvraag wordt verwerkt. U wordt binnen enkele seconden doorgestuurd.</p>
+              <script>
+                    var timer = setTimeout(function() {
+                        var pageurl = document.getElementById('bedanktpagina').innerHTML
+                        window.location.href = pageurl
+                    }, 3000);
+              </script>
+            </div>
+        </div>
+        <div class="section--3">
+        </div>
+    </div>
+  
+<!-- Hoofdpagina -->
+    %%[ELSE]%%
+    <div class="grid" id="content">
+        <div class="section--2">
+            <div class="content">
+                                        <img class="logo" src="https://image.info.arboned.nl/lib/fe39117075640474741172/m/1/aae83fb4-506e-44e4-b723-693ff2d74c93.png" alt="Aegon Logo">
+                <p>Ik wil een overeenkomst aangaan met ArboNed BV voor de aanpak van verzuim en kies voor het Loket Aegon.</p>
+            </div>
+          
+ <!-- Formulier -->       
+            <div class="form--section">
+                <form action="%%=RequestParameter('PAGE URL')=%%" method="POST" id="form">
+                    <div class="question">
+                        <h2>Ik wil het volgende abonnement afsluiten:</h2>
+                        <input class="calculator" type="radio" id="comfort" name="aegon" value="ArboNed Comfort Aegon">
+                        <label for="comfort">ArboNed Comfort Aegon</label>
+                        <br />
+                       <input class="calculator" type="radio" id="activiteiten" name="aegon" value="ArboNed Basis Aegon">
+                        <label for="activiteiten">ArboNed Basis Aegon</label>
+                    </div>
+                   
+                  <div class="question">
+                        <h2>Hoeveel werknemers heeft u in dienst?</h2>
+                        <input type="number" id="employees" name="employees" class="calculator" placeholder="Aantal werknemers"/>
+                                     
+                  </div>
+                  
+                   <div class="question">
+                        <h2>Heeft u nu te maken met verzuim?</h2>
+                        <input type="radio" id="momenteelverzuim_ja" name="momenteelverzuim" value="Ja">
+                        <label for="momenteelverzuim_ja">Ja</label>
+                        <br />
+                        <input type="radio" id="momenteelverzuim_nee" name="momenteelverzuim" value="Nee">
+                        <label for="momenteelverzuim_nee">Nee</label>
+                        <label id="momenteelverzuim-error" class="error error-msg" for="momenteelverzuim"></label>
+                        <div class="note" id="verzuim-note">
+                          Indien u eerder was aangesloten bij een andere arbodienstverlener dient u, conform onze samenwerkingsvoorwaarden, uw werknemers op de hoogte te brengen dat ArboNed de nieuwe arbodienst is. 
+                          U dient hierbij tevens aan te geven dat re-integratiedossiers van lopend verzuim worden overgedragen aan ArboNed, mits de werknemer geen bezwaar hiervoor aantekent. 
+                          In overleg met uw vaste contactpersoon ontvangt de betreffende werknemer hiervoor van ons een machtiging waarmee hij toestemming verleent aan ArboNed voor overdracht van het dossier door de voormalige arbodienst. 
+                          Pas na ontvangst van het dossier kan ArboNed dienstverlening voor de betreffende werknemer ingang zetten (zoals bezoek spreekuur (bedrijfs)arts of opstarten interventie). Omdat u te maken heeft met een zieke werknemer nemen wij versneld contact met u op.
+                        </div>
+                  </div>
+                 
+                   
+                  <div class="question">
+                        <h2>Wanneer wilt u dat dit abonnement ingaat?</h2>
+                        <input type="date" id="ingangsdatum" name="ingangsdatum"/>
+                  </div>        
+                    
+                    <div class="question">
+                        <h2>Bedrijfsgegevens</h2>
+                         <br />
+                       
+                        <span>Aanhef:</span><br />
+                        <input type="radio" id="meneer" name="aanhef" value="meneer">
+                        <label for="meneer">meneer</label>
+                        <input type="radio" id="mevrouw" name="aanhef" value="mevrouw">
+                        <label for="mevrouw">mevrouw</label>
+                        <br>  
+                        <label id="aanhef-error" class="error error-msg" for="aanhef"></label>
+                        
+                        <input type="text" id="initials" name="initials" placeholder="Voorletters" />
+                        <input type="text" id="middlename" name="middlename" placeholder="Tussenvoegsel" value=""/>
+                        <input type="text" id="lastname" name="lastname" placeholder="Achternaam" required/>
+                        <select id="company" name="company">    
+                        </select>
+                        <input type="text" id="address" name="address" placeholder="Adres" />
+                        <input type="text" id="zip" name="zip" placeholder="Postcode" />
+                        <input type="text" id="city" name="city" placeholder="Plaats" />
+                        <input type="text" id="phone" name="phone" placeholder="Telefoonnummer" />
+                        <input type="text" id="email" name="email" placeholder="Email" />
+                                   
+              
+                        <br><br>
+
+                        <input type="checkbox" id="voorwaarden" name="voorwaarden" required  value="true"/>
+                        <label for="voorwaarden" id="voorwaarden-label">
+                            Ik heb de <a href="https://www.arboned.nl/uploads/inline/ArboNed_Algemene_voorwaarden.pdf" target="_blank">algemene
+                                voorwaarden</a> gelezen en ga ermee akkoord.
+                        </label>
+                        <label id="voorwaarden-error" class="error error-msg" for="voorwaarden"></label>
+                        <p>
+                          <ul>
+                            <li>Het tarief is exclusief BTW.</li>
+                            <li>Dit aanbod is niet geldig in combinatie met andere kortingen, acties of aanbestedingstarieven.</li>
+                       </ul>                            
+                        </p>
+                    </div>
+                    <input type="hidden" id="result" name="results" value="0">
+                    <input type="hidden" id="kvk" name="kvk" value="0">
+                    <input type="hidden" id="duns" name="duns" value="0">
+                    <input type="submit" id="submit" name="submit" value="Afsluiten">
+                </form>
+                <p>
+                  Hoe wij met uw gegevens omgaan, leest u <a href="https://www.arboned.nl/privacyreglement" target="_blank">hier</a>.
+               </p>
+            </div>
+        </div>
+  
+  <!-- Sidebar -->
+        <div class="section--3">
+            <div class="sticky">
+                <div class="sidebar">
+                    <div class="pretitle">Uw gegevens</div>
+                    <div class="results">
+                        <h3>Aegon abonnement</h3>
+                        
+
+                        <div class="price">
+                            <h1 id="results">&euro; 0,-</h1>
+                        </div>
+                        <ul class="list">
+                          <li id="li_1" style="display:none;"></li>
+                          <li id="li_2" style="display:none;"></li>
+                          
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    %%[ENDIF]%%
+    <footer>
+        <div class="grid">
+            <div class="section--4">
+                <div class="copyright">
+                    &copy; 2020 ArboNed |
+                    <a href="https://www.arboned.nl/disclaimer" target="_blank">Disclaimer</a> |
+                    <a href="https://www.arboned.nl/algemene-voorwaarden" target="_blank">Algemene voorwaarden</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+%%[ IF RequestParameter('submit') != 'Afsluiten' THEN ]%%
+  <script>
+    $(document).ready(function () {
+      var aegonabonnement = 0
+      var employees = 0
+      var sum 
+      var result
+       if ($('#comfort').is(":checked")) {
+          aegonabonnement = 105;
+          $('#li_1').html("ArboNed Comfort Aegon");
+          $('#li_1').css("display", "block");
+     } else if ($('#activiteiten').is(":checked")) {
+          aegonabonnement = 31;
+          $('#li_1').html("ArboNed Basis Aegon");
+          $('#li_1').css("display", "block");
+        
+        } else {
+          aegonabonnement = 0;
+        }
+       if($('#momenteelverzuim_ja').is(":checked")) {        
+          $('#verzuim-note').css('display', "block");
+       }
+       else{
+          $('#verzuim-note').css('display', "none");
+       }
+          var sum = aegonabonnement
+          var result = '&euro; ' + sum + ',-'
+        $('#result').val(sum);
+        $('#results').html(result);
+
+      $('.calculator').bind('click keyup', function(event) {
+
+        if ($('#comfort').is(":checked")) {
+          if($('#employees').val() != ''){
+            var employees = $('#employees').val();
+            var total = employees * 105;
+            
+            $('#li_1').html("ArboNed Comfort Aegon");
+            $('#li_1').css("display", "block");
+            
+          }
+          else{
+            total = 105;
+            $('#li_1').html("ArboNed Comfort Aegon");
+            $('#li_1').css("display", "block");
+          }
+        } else if ($('#activiteiten').is(":checked")) {
+          if($('#employees').val() != ''){
+            var employees = $('#employees').val();
+            var total = employees * 31;
+            
+            $('#li_1').html("ArboNed Basis Aegon");
+            $('#li_1').css("display", "block");
+          }
+          else{
+            total = 31;
+            $('#li_1').html("ArboNed Comfort Aegon");
+            $('#li_1').css("display", "block");
+          }
+        } else {
+          aegonabonnement = 0;
+        }
+
+          var result = '&euro; ' + total + ',-'
+        $('#result').val(total);
+        $('#results').html(result);
+      });   
+      
+      $('#employees').on('keyup', function(event) {
+       if ($('#comfort').is(":checked")) {
+          var employees = $('#employees').val();
+          if(employees > 0){
+          var total = 105 * employees;
+         
+          if(employees == 1){
+           $('#li_2').html(employees + " werknemer");
+          }
+          else{
+           $('#li_2').html(employees + " werknemers");
+          }
+          $('#li_2').css("display", "block");
+          }
+         else{
+          var total = 105
+          $('#li_2').html("0" + " werknemers");
+          $('#li_2').css("display", "none");
+           
+         }
+        } else if ($('#activiteiten').is(":checked")) {
+          var employees = $('#employees').val();
+          if(employees > 0){
+          var total = 31 * employees;
+          
+          if(employees == 1){
+           $('#li_2').html(employees + " werknemer");
+          }
+          else{
+           $('#li_2').html(employees + " werknemers");
+          }
+
+          $('#li_2').css("display", "block");
+          }
+          else{
+          var total = 31
+          $('#li_2').html("0" + " werknemers");
+          $('#li_2').css("display", "none");
+            
+          }
+        }
+        else {
+          total = '0'
+        }
+
+        var result = '&euro; ' + total + ',-'
+        $('#result').val(result);
+        $('#results').html(result);
+      });
+      $('#momenteelverzuim_ja').bind('click keyup', function(event) {
+        $('#verzuim-note').css('display', "block");
+      });
+      $('#momenteelverzuim_nee').bind('click keyup', function(event) {
+        $('#verzuim-note').css('display', "none");
+      });
+    });
+  </script>
+  <script>
+    $(document).ready (function(){
+      $(":input[placeholder]").each (function () {
+        var input = $(this);
+        input.addClass("placeholder");
+        input.val(input.attr("placeholder"));
+        $(this).focus(function() {
+          var input = $(this);
+          if (input.val() == input.attr("placeholder")) {
+            input.val("");
+            input.removeClass("placeholder");
+          }
+        });
+        $(this).blur(function() {
+          var input = $(this);
+          if (input.val() == "" || input.val() == input.attr("placeholder")) {
+            input.addClass("placeholder");
+            input.val(input.attr("placeholder"));
+          }
+        })
+      });
+      $.validator.addMethod(
+        "notplaceholder", 
+        function(value, element){
+          return ($(element).attr("placeholder") != value);
+        }, 
+        "Dit is een verplicht veld."
+      );
+      $.validator.addMethod(
+        "phone",
+        function(value,element){
+          return this.optional(element) || /^((\+|00(\s|\s?\-\s?)?)31(\s|\s?\-\s?)?(\(0\)[\-\s]?)?|0)[1-9]((\s|\s?\-\s?)?[0-9])((\s|\s?-\s?)?[0-9])((\s|\s?-\s?)?[0-9])\s?[0-9]\s?[0-9]\s?[0-9]\s?[0-9]\s?[0-9]$/.test(value);
+      },"Voer een geldig telefoonnummer in.");
+
+      // jquery validate initialisation
+      $("#form").validate({
+        rules: {
+          aegon : {
+            required :true,
+            notplaceholder : false
+          },
+         employees : {
+            required : true,
+            digits : true,
+            notplaceholder : true
+         },
+         momenteelverzuim : {
+            required : true,
+            notplaceholder : false
+          },
+           ingangsdatum : {
+            required : true,
+            notplaceholder : false
+          },
+          aanhef : {
+            required : true,
+            notplaceholder : false
+          },
+          initials : {
+            required : true,
+            notplaceholder : true
+          },
+
+          lastname : {
+            required : true,
+            notplaceholder : true
+          },
+          company : {
+            required : true,
+            notplaceholder : true
+          },
+          address : {
+            required : true,
+            notplaceholder : true
+          },
+          zip : {
+            required : true,
+            notplaceholder : true
+          },
+          city : {
+            required : true,
+            notplaceholder : true
+          },
+          phone : {
+            required : true,
+            phone: false,
+            notplaceholder : true
+          },
+          email : {
+            required : true,
+            email : true,
+            notplaceholder : true
+          }
+        },
+        
+        errorPlacement: function(error, element) {
+          $(element).addClass("error");
+          var companyvalue = $("#company").val()
+          if (companyvalue == null) {
+            $(".select2-selection.select2-selection--single").addClass("error");
+            $(".select2-selection.select2-selection--single").addClass("placeholder");
+          }
+        }
+      });
+    });
+  </script>
+  <script>
+    function formatSelection(data) {
+      return data.Fields.plaats;
+    }
+    
+    $(document).ready(function() {
+
+      $('#company').select2({
+          ajax: {
+              url: 'https://www.arboned.nl/smart-nl/search',
+              data: function(params) {
+                  var query = {
+                      query: params.term,
+                  }
+                  return query;
+              },
+              processResults: function(data) {
+                  var dataArray = [];
+                  for (var i = 0, len = data.length; i < len; i++) {
+                      let bedrijfsnaam = data[i].Fields.bedrijfsnaam;
+                      let plaats = data[i].Fields.vestigingplaats;
+                      let straat = data[i].Fields.vestigingstraatnaam;
+                      let huisnummer = data[i].Fields.vestiginghuisnummer;
+                      let postcode = data[i].Fields.vestigingpostcode;
+                      let adres = straat + ' ' + huisnummer;
+                      var kvk = data[i].Fields.kvk_8;
+                      var duns = data[i].Fields.duns;
+                      var bedrijfString = bedrijfsnaam + ' ' + plaats + ', ' + straat + ' ' + huisnummer;
+
+                      dataArray.push({
+                          'id': bedrijfsnaam,
+                          'text': bedrijfsnaam,
+                          'bedrijfsnaam': bedrijfsnaam,
+                          'straat': straat,
+                          'huisnummer': huisnummer,
+                          'postcode': postcode,
+                          'plaats': plaats,
+                          'adres': adres,
+                          'kvk': kvk,
+                          'duns': duns,
+                          'bedrijfString': bedrijfString
+                      });
+                  }
+                  return {
+                      results: dataArray
+                  };
+
+              },
+
+          },
+          templateResult: function (entry) {
+                          var formatted = $('<span>' + entry.bedrijfString + '</span>');
+                          return formatted;
+          },
+          language: "nl",
+          minimumInputLength: 2,
+         placeholder: "Bedrijfsnaam",
+      });
+    
+      $('#company').on('change', function(){
+        var selectedData = $('#company').select2('data')[0] 
+
+        if(selectedData){
+          $('#company').val(selectedData.bedrijfsnaam)
+          $('#address').val(selectedData.adres)
+          $('#zip').val(selectedData.postcode)
+          $('#city').val(selectedData.plaats)
+          $('#duns').val(selectedData.duns)
+          $('#kvk').val(selectedData.kvk)
+          $('#company').removeClass('placeholder')
+          $('#address').removeClass('placeholder')
+          $('#zip').removeClass('placeholder')
+          $('#city').removeClass('placeholder')
+          $(".select2-selection.select2-selection--single").removeClass("error");
+          $(".select2-selection.select2-selection--single").removeClass("placeholder");
+        }
+
+      })
+
+    }); 
+  
+  
+ </script>
+%%[ENDIF]%%
+  
+</body>
+
+</html>
